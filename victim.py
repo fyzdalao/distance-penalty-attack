@@ -28,7 +28,9 @@ def predict(x, model, batch_size, device):
 
 class Model(nn.Module):
     def __init__(self, device=my_device, batch_size=500):
+        super(Model, self).__init__()
         self.cnn = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT).to(device).eval()
+        self.arch = 'wide_resnet50_2'
         self.device = device
         self.batch_size = batch_size
 
