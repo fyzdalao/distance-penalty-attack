@@ -93,12 +93,26 @@ def sample_imagenet_every_class(model, random_seed=0, need_right_prediction=True
     return x_test, y_test
 
 
+'''
+return a margin of shape (n)
+'''
 def margin_loss(y, logits):
     a = (logits * y)
     rest = logits - a
     margin = a.max(1) - rest.max(1)
     return margin
 
+
+'''
+return a margin of shape (n,1)
+'''
+def margin_loss_their(y, logits):
+    y = np.array(y, dtype=bool)
+    preds_correct_class = (logits * y).sum(1, keepdims=True)
+    diff = preds_correct_class - logits
+    diff[y] = np.inf
+    margin = diff.min(1, keepdims=True)
+    return margin
 
 
 
