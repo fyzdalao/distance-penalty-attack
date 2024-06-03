@@ -18,7 +18,7 @@ def predict(x, model, batch_size, device):
         batch_logits = []
         with torch.no_grad():
             for i in range(batch_amount):
-                x_now = torch.as_tensor(x[i*batch_size : (i+1)*batch_size], device=device)
+                x_now = torch.as_tensor(x[i*batch_size : (i+1)*batch_size], device=device, dtype=torch.float32)
                 batch_logits.append(model(x_now).detach().cpu().numpy())
         logits = np.vstack(batch_logits)
         return logits
