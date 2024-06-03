@@ -113,7 +113,7 @@ def margin_loss_their(y, logits):
     diff = preds_correct_class - logits
     diff[y] = np.inf
     margin = diff.min(1, keepdims=True)
-    return margin
+    return margin.flatten()
 
 
 def get_time(): return time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
