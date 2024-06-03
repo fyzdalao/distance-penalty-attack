@@ -2,6 +2,7 @@ import os
 import random
 import numpy as np
 import PIL.Image
+import time
 
 def sample_imagenet(model, amount=2000, random_seed=0, need_right_prediction=False):
     with open('data/val.txt', 'r') as f:
@@ -113,6 +114,52 @@ def margin_loss_their(y, logits):
     diff[y] = np.inf
     margin = diff.min(1, keepdims=True)
     return margin
+
+
+def get_time(): return time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
+
+
+class Logger:
+    def __init__(self, path):
+        self.path = path
+        if path != '':
+            folder = '/'.join(path.split('/')[:-1])
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+
+    def print(self, message):
+        print(message)
+        if self.path != '':
+            with open(self.path, 'a') as f:
+                f.write(message + '\n')
+                f.flush()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
