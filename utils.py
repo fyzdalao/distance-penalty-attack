@@ -5,6 +5,13 @@ import PIL.Image
 import time
 
 def sample_imagenet(model, amount=2000, random_seed=0, need_right_prediction=False):
+    data_path = 'data/storage/imagenet_imgs_seed=%d_amt=%d.npy' % (random_seed, amount)
+    label_path = 'data/storage/imagenet_lbls_seed=%d_amt=%d.npy' % (random_seed, amount)
+    if os.path.exists(data_path) and os.path.exists(label_path):
+        x_test = np.load(data_path)
+        y_test = np.load(label_path)
+        return x_test, y_test
+
     with open('data/val.txt', 'r') as f:
         lines = f.read().split('\n')
     labels = {}
@@ -39,6 +46,8 @@ def sample_imagenet(model, amount=2000, random_seed=0, need_right_prediction=Fal
 
     x_test = np.array(data)
     y_test = np.array(label)
+    np.save(data_path, x_test)
+    np.save(label_path, y_test)
     return x_test, y_test
 
 
