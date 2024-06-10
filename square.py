@@ -66,7 +66,7 @@ def p_selection(p_init, it, n_iters):
     return p
 
 
-def square_attack_l2(model, x, y, correct, n_iters, eps=5, p_init=0.1):
+def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1):
     y = np.array(y, dtype=bool)
     result_path = 'results' + '/' + get_time() + '/log.log'
     log = Logger(result_path)

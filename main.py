@@ -38,5 +38,5 @@ if __name__ == '__main__':
 
 
 
-   square_attack_l2(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=2000, eps=0.05, p_init=0.1)
+   square_attack_l2(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=2000, eps=5, p_init=0.1)
 
