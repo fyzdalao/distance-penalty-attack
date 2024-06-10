@@ -5,7 +5,7 @@ from square import square_attack_l2
 
 
 def load_model():
-   return victim.Model()
+   return victim.Model(defense='None')
 
 
 def load_data(model, amount=2000, random_seed=0, need_right_prediction=False):

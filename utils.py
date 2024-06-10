@@ -96,6 +96,7 @@ def sample_imagenet_every_class(model, random_seed=0, need_right_prediction=True
 
 '''
 return a margin of shape (n)
+do not use this.
 '''
 def margin_loss(y, logits):
     a = (logits * y)
