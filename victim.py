@@ -42,12 +42,17 @@ class Model(nn.Module):
         self.attractor_interval = 6
         self.reverse_step = 1
 
+        # RND parameters
+        self.n_in = 0.03
+        self.n_out = 0.3
 
     def forward(self, x):
         if self.defense == 'None':
             return predict(x=x, model=self.cnn, batch_size=self.batch_size, device=self.device)
         elif self.defense =='AAASine':
             return self.aaa_sine_forward(x)
+        elif self.defense == 'inRND' or self.defense == 'outRND' or self.defense == 'inoutRND':
+            return self.rnd_forward(x)
         else:
             warnings.warn('no such defense method')
 
@@ -73,6 +78,58 @@ class Model(nn.Module):
         if isinstance(x, np.ndarray):
             logits_ret = logits_ret.numpy()
         return logits_ret
+
+
+    def rnd_forward(self, x):
+        if self.defense=='inRND' or self.defense=='inoutRND':
+            noise_in = np.random.normal(scale=self.n_in, size=x.shape)
+        else:
+            noise_in = np.zeros(shape=x.shape)
+
+        logits = predict(x=np.clip(x + noise_in, 0, 1), model=self.cnn, batch_size=self.batch_size, device=self.device)
+
+        if self.defense=='outRND' or self.defense=='inoutRND':
+            noise_out = np.random.normal(scale=self.n_out, size=logits.shape)
+        else:
+            noise_out = np.zeros(shape=logits.shape)
+
+        return logits + noise_out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
