@@ -66,7 +66,7 @@ def p_selection(p_init, it, n_iters):
     return p
 
 
-def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1):
+def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='reverse'):
 
     np.random.seed(19260817)
 
@@ -99,6 +99,13 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1):
     logits = model(x_best)
     margin_min = margin_loss_their(y, logits)
     n_queries = np.ones(x.shape[0])  # 访问模型次数
+
+
+    persuit = np.zeros(x.shape[0], dtype=bool) #persuit=0表示正在前往谷底， =1表示正在攀登山峰
+    iters_without_change = np.zeros(x.shape[0], dtype=int) #连续迭代多少次没更新了
+    time_to_reverse = 25
+
+
 
     time_start = time.time()
     for i_iter in range(n_iters):
@@ -156,8 +163,30 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1):
         logits = model(x_new)
         margin = margin_loss_their(y_curr, logits)
 
-        idx_improved = margin < margin_min_curr
+        idx_suc = margin <= 0
+
+        if attack_tactic == 'None':
+            idx_improved = margin < margin_min_curr
+        elif attack_tactic == 'reverse':
+            persuit_curr, iters_without_change_curr = persuit[idx_to_fool], iters_without_change[idx_to_fool]
+
+            idx_higher = margin > margin_min_curr
+            idx_lower = margin < margin_min_curr
+            idx_improved = idx_higher * persuit_curr + idx_lower * ~persuit_curr
+            idx_improved = idx_improved | idx_suc
+            iters_without_change_curr[~idx_improved] += 1
+            idx_to_reverse = iters_without_change_curr > time_to_reverse
+            idx_improved += idx_to_reverse
+            iters_without_change_curr[idx_improved] = 0
+            persuit_curr[idx_to_reverse] = ~persuit_curr[idx_to_reverse]
+
+            # write back
+            persuit[idx_to_fool] = persuit_curr
+            iters_without_change[idx_to_fool] = iters_without_change_curr
+
+        ### write back
         margin_min[idx_to_fool] = idx_improved * margin + ~idx_improved * margin_min_curr
+
 
         idx_improved = np.reshape(idx_improved, [-1, *[1] * len(x.shape[:-1])])
         x_best[idx_to_fool] = idx_improved * x_new + ~idx_improved * x_best_curr
