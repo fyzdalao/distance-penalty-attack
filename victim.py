@@ -40,7 +40,7 @@ class Model(nn.Module):
         # AAA parameters
         self.dev = 0.5
         self.attractor_interval = 6
-        self.reverse_step = 1
+        self.reverse_step = 0.7
 
         # RND parameters
         self.n_in = 0.03
@@ -69,7 +69,7 @@ class Model(nn.Module):
 
         margin_ori = value[:, 0] - value[:, 1]
         attractor = ((margin_ori / self.attractor_interval + self.dev).round() - self.dev) * self.attractor_interval
-        target = margin_ori - 0.7 * self.attractor_interval * torch.sin(
+        target = margin_ori - self.reverse_step * self.attractor_interval * torch.sin(
             (1 - 2 / self.attractor_interval * (margin_ori - attractor)) * torch.pi)
         gap_to_target = target - margin_ori
         logits_ori[torch.arange(logits_ori.shape[0]), index_ori[:, 0]] += gap_to_target
