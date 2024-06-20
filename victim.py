@@ -40,7 +40,7 @@ class Model(nn.Module):
         # AAA parameters
         self.dev = 0.5
         self.attractor_interval = 6
-        self.reverse_step = 1
+        self.reverse_step = 0.7
 
         # RND parameters
         self.n_in = 0.03
