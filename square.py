@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import time
 from utils import margin_loss, margin_loss_their, Logger, get_time
@@ -105,6 +107,11 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tact
     iters_without_change = np.zeros(x.shape[0], dtype=int) #连续迭代多少次没更新了
     time_to_reverse = 25
 
+    x_best_peak = deepcopy(x_best)
+    x_best_bottom = deepcopy(x_best)
+    best_peak = deepcopy(margin_min)
+    best_bottom = deepcopy(margin_min)
+
 
     #设置模拟退火参数
     tmp = np.ones(x.shape[0]) * 5 #初始温度，应该较低以降低对最脆弱样例的副作用
@@ -187,22 +194,41 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tact
             idx_improved = margin < margin_min_curr
         elif attack_tactic =='sa':
             idx_improved = idx_improved_sa
-        # elif attack_tactic == 'reverse':
-        #     persuit_curr, iters_without_change_curr = persuit[idx_to_fool], iters_without_change[idx_to_fool]
-        #
-        #     idx_higher = margin > margin_min_curr
-        #     idx_lower = margin < margin_min_curr
-        #     idx_improved = idx_higher * persuit_curr + idx_lower * ~persuit_curr
-        #     idx_improved = idx_improved | idx_suc
-        #     iters_without_change_curr[~idx_improved] += 1
-        #     idx_to_reverse = iters_without_change_curr > time_to_reverse
-        #     idx_improved += idx_to_reverse
-        #     iters_without_change_curr[idx_improved] = 0
-        #     persuit_curr[idx_to_reverse] = ~persuit_curr[idx_to_reverse]
-        #
-        #     # write back
-        #     persuit[idx_to_fool] = persuit_curr
-        #     iters_without_change[idx_to_fool] = iters_without_change_curr
+        elif attack_tactic == 'reverse':
+            persuit_curr, iters_without_change_curr = persuit[idx_to_fool], iters_without_change[idx_to_fool]
+            x_best_peak_curr, x_best_bottom_curr, best_peak_curr, best_bottom_curr = x_best_peak[idx_to_fool], \
+                x_best_bottom[idx_to_fool], best_peak[idx_to_fool], best_bottom[idx_to_fool]
+
+            idx_higher = margin > margin_min_curr
+            idx_lower = margin < margin_min_curr
+            idx_improved = idx_higher * persuit_curr + idx_lower * ~persuit_curr
+            idx_improved = idx_improved | idx_suc
+            iters_without_change_curr[~idx_improved] += 1
+            idx_to_reverse = iters_without_change_curr > time_to_reverse
+            idx_improved += idx_to_reverse
+            iters_without_change_curr[idx_improved] = 0
+
+            idx_better_peak = idx_to_reverse * persuit_curr * (margin_min_curr < best_peak_curr)
+            idx_better_bottom = idx_to_reverse * ~persuit_curr * (margin_min_curr < best_bottom_curr)
+            best_peak_curr[idx_better_peak] = margin_min_curr[idx_better_peak]
+            best_bottom_curr[idx_better_bottom] = margin_min_curr[idx_better_bottom]
+            x_best_peak_curr[idx_better_peak] = x_curr[idx_better_peak]
+            x_best_bottom_curr[idx_better_bottom] = x_curr[idx_better_bottom]
+
+            persuit_curr[idx_to_reverse] = ~persuit_curr[idx_to_reverse]
+
+            x_new[idx_to_reverse * persuit_curr] = x_best_bottom_curr[idx_to_reverse * persuit_curr]
+            x_new[idx_to_reverse * ~persuit_curr] = x_best_peak_curr[idx_to_reverse * ~persuit_curr]
+            margin[idx_to_reverse * persuit_curr] = best_bottom_curr[idx_to_reverse * persuit_curr]
+            margin[idx_to_reverse * ~persuit_curr] = best_peak_curr[idx_to_reverse * ~persuit_curr]
+
+            # write back
+            persuit[idx_to_fool] = persuit_curr
+            iters_without_change[idx_to_fool] = iters_without_change_curr
+            best_peak[idx_to_fool] = best_peak_curr
+            best_bottom[idx_to_fool] = best_bottom_curr
+            x_best_peak[idx_to_fool] = x_best_peak_curr
+            x_best_bottom[idx_to_fool] = x_best_bottom_curr
 
         ### write back
         margin_min[idx_to_fool] = idx_improved * margin + ~idx_improved * margin_min_curr
