@@ -54,8 +54,8 @@ def sample_imagenet(model, amount=2000, random_seed=0, need_right_prediction=Fal
 
 def sample_imagenet_every_class(model, random_seed=0, need_right_prediction=True):
     arch = model.arch
-    data_path = 'data/imagenetEvery_%s_x_seed=%d.npy' % (arch, random_seed)
-    label_path = 'data/imagenetEvery_%s_y_seed=%d.npy' % (arch, random_seed)
+    data_path = 'data/storage/imagenetEvery_%s_x_seed=%d.npy' % (arch, random_seed)
+    label_path = 'data/storage/imagenetEvery_%s_y_seed=%d.npy' % (arch, random_seed)
 
     if not os.path.exists(data_path) or not os.path.exists(label_path):
         with open('data/val.txt','r') as f:

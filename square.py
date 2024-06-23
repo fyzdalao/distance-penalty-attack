@@ -68,7 +68,7 @@ def p_selection(p_init, it, n_iters):
     return p
 
 
-def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='sa'):
+def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='None'):
 
     np.random.seed(19260817)
 
