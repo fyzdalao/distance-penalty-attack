@@ -288,6 +288,177 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tact
 
 
 
+def square_attack_linf(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='None'):
+
+    np.random.seed(19260817)
+
+    y = np.array(y, dtype=bool)
+    result_path = 'results' + '/' + get_time() + '/log.log'
+    log = Logger(result_path)
+
+    min_val, max_val = 0, 1
+    c, h, w = x.shape[1:]
+    n_features = c * h * w
+    example_amount = x.shape[0]
+    y = y[correct]
+    x = x[correct]
+
+    # [c, 1, w], i.e. vertical stripes work best for untargeted attacks
+    init_delta = np.random.choice([-eps, eps], size=[x.shape[0], c, 1, w])
+
+    x_best = np.clip(x + init_delta, min_val, max_val)
+
+    logits = model(x_best)
+    margin_min = margin_loss_their(y, logits)
+    n_queries = np.ones(x.shape[0])  # 访问模型次数
+
+    acc = (margin_min > 0.0).sum() / example_amount
+
+    persuit = np.zeros(x.shape[0], dtype=bool) #persuit=0表示正在前往谷底， =1表示正在攀登山峰
+    iters_without_change = np.zeros(x.shape[0], dtype=int) #连续迭代多少次没更新了
+    time_to_reverse = 25
+
+    x_best_peak = deepcopy(x_best)
+    x_best_bottom = deepcopy(x_best)
+    best_peak = deepcopy(margin_min)
+    best_bottom = deepcopy(margin_min)
+
+
+    #设置模拟退火参数
+    tmp = np.ones(x.shape[0]) * 5 #初始温度，应该较低以降低对最脆弱样例的副作用
+    convergence_times = np.zeros(x.shape[0], dtype=int)
+
+
+
+    time_start = time.time()
+    for i_iter in range(n_iters):
+        idx_to_fool = margin_min > 0.0  # 分类正确，仍待攻击的下标
+
+        x_curr, x_best_curr = x[idx_to_fool], x_best[idx_to_fool]
+        y_curr, margin_min_curr = y[idx_to_fool], margin_min[idx_to_fool]
+        delta_curr = x_best_curr - x_curr
+
+        #模拟退火
+        # tmp_curr = tmp[idx_to_fool]
+        # convergence_times_curr = convergence_times[idx_to_fool]
+
+
+        p = p_selection(p_init, i_iter, n_iters)
+
+        for i_img in range(x_best_curr.shape[0]):
+            s = int(round(np.sqrt(p * n_features / c)))
+            s = min(max(s, 1), h-1)  # at least c x 1 x 1 window is taken and at most c x h-1 x h-1
+            center_h = np.random.randint(0, h - s)
+            center_w = np.random.randint(0, w - s)
+
+            x_curr_window = x_curr[i_img, :, center_h:center_h+s, center_w:center_w+s]
+            x_best_curr_window = x_best_curr[i_img, :, center_h:center_h+s, center_w:center_w+s]
+            # prevent trying out a delta if it doesn't change x_curr (e.g. an overlapping patch)
+            while np.sum(np.abs(np.clip(x_curr_window + delta_curr[i_img, :, center_h:center_h+s, center_w:center_w+s], min_val, max_val) - x_best_curr_window) < 10**-7) == c*s*s:
+                delta_curr[i_img, :, center_h:center_h+s, center_w:center_w+s] = np.random.choice([-eps, eps], size=[c, 1, 1])
+
+        x_new = np.clip(x_curr + delta_curr, min_val, max_val)
+
+        logits = model(x_new)
+        margin = margin_loss_their(y_curr, logits)
+
+        idx_suc = margin <= 0
+
+        #尝试一下模拟退火
+        # p = np.exp( -(margin - margin_min_curr) / tmp_curr ) #接受更劣解的概率
+        # r = np.random.rand(p.size)
+        # idx_improved_sa = (margin < margin_min_curr) + (p > r)
+        #
+        # tmp_curr = tmp_curr * 0.98
+
+        idx_improved = margin < margin_min_curr
+        if attack_tactic == 'None':
+            pass
+        # elif attack_tactic =='sa':
+        #     idx_improved = idx_improved_sa
+        # elif attack_tactic == 'reverse':
+        #     persuit_curr, iters_without_change_curr = persuit[idx_to_fool], iters_without_change[idx_to_fool]
+        #     x_best_peak_curr, x_best_bottom_curr, best_peak_curr, best_bottom_curr = x_best_peak[idx_to_fool], \
+        #         x_best_bottom[idx_to_fool], best_peak[idx_to_fool], best_bottom[idx_to_fool]
+        #
+        #     idx_higher = margin > margin_min_curr
+        #     idx_lower = margin < margin_min_curr
+        #     idx_improved = idx_higher * persuit_curr + idx_lower * ~persuit_curr
+        #     idx_improved = idx_improved | idx_suc
+        #     iters_without_change_curr[~idx_improved] += 1
+        #     idx_to_reverse = iters_without_change_curr > time_to_reverse
+        #     idx_improved += idx_to_reverse
+        #     iters_without_change_curr[idx_improved] = 0
+        #
+        #     idx_better_peak = idx_to_reverse * persuit_curr * (margin_min_curr < best_peak_curr)
+        #     idx_better_bottom = idx_to_reverse * ~persuit_curr * (margin_min_curr < best_bottom_curr)
+        #     best_peak_curr[idx_better_peak] = margin_min_curr[idx_better_peak]
+        #     best_bottom_curr[idx_better_bottom] = margin_min_curr[idx_better_bottom]
+        #     x_best_peak_curr[idx_better_peak] = x_curr[idx_better_peak]
+        #     x_best_bottom_curr[idx_better_bottom] = x_curr[idx_better_bottom]
+        #
+        #     persuit_curr[idx_to_reverse] = ~persuit_curr[idx_to_reverse]
+        #
+        #     # x_new[idx_to_reverse * persuit_curr] = x_best_bottom_curr[idx_to_reverse * persuit_curr]
+        #     # x_new[idx_to_reverse * ~persuit_curr] = x_best_peak_curr[idx_to_reverse * ~persuit_curr]
+        #     # margin[idx_to_reverse * persuit_curr] = best_bottom_curr[idx_to_reverse * persuit_curr]
+        #     # margin[idx_to_reverse * ~persuit_curr] = best_peak_curr[idx_to_reverse * ~persuit_curr]
+        #
+        #     # write back
+        #     persuit[idx_to_fool] = persuit_curr
+        #     iters_without_change[idx_to_fool] = iters_without_change_curr
+        #     best_peak[idx_to_fool] = best_peak_curr
+        #     best_bottom[idx_to_fool] = best_bottom_curr
+        #     x_best_peak[idx_to_fool] = x_best_peak_curr
+        #     x_best_bottom[idx_to_fool] = x_best_bottom_curr
+
+        ### write back
+        margin_min[idx_to_fool] = idx_improved * margin + ~idx_improved * margin_min_curr
+
+        ###SA
+        #对已经收敛但仍未攻击成功的x进行重新升温
+        # zero_vector = np.zeros(convergence_times_curr.size, dtype=int)
+        # one_vector = np.ones(convergence_times_curr.size, dtype=int)
+        # convergence_times_curr = ~idx_improved * convergence_times_curr + ~idx_improved * one_vector + idx_improved * zero_vector
+        # idx_to_heat = convergence_times_curr > 20 #应该把20步内没变改为20步内没变小？
+        #
+        # if i_iter > 400:
+        #     tmp_curr[idx_to_heat] = 25.0
+        # else:
+        #     tmp_curr[idx_to_heat] = 20.0
+        #
+        #
+        # tmp[idx_to_fool] = tmp_curr
+        # convergence_times_curr[idx_to_heat] = 0
+        # convergence_times[idx_to_fool] =  convergence_times_curr
+
+        ###SA
+
+
+
+        idx_improved = np.reshape(idx_improved, [-1, *[1] * len(x.shape[:-1])])
+        x_best[idx_to_fool] = idx_improved * x_new + ~idx_improved * x_best_curr
+        n_queries[idx_to_fool] += 1
+
+
+        ### measures
+        acc = (margin_min > 0.0).sum() / example_amount
+        acc_corr = (margin_min > 0.0).mean()
+        mean_nq, mean_nq_ae, median_nq, median_nq_ae = np.mean(n_queries), np.mean(
+            n_queries[margin_min <= 0]), np.median(n_queries), np.median(n_queries[margin_min <= 0])
+
+
+        ### logs
+        time_total = time.time() - time_start
+        log.print(
+            '{}: acc={:.2%} acc_corr={:.2%} avg#q_ae={:.1f} med#q_ae={:.1f}, n_ex={}, {:.0f}s'.
+            format(i_iter + 1, acc, acc_corr, mean_nq_ae, median_nq_ae, x.shape[0], time_total))
+
+        if acc == 0:
+            break
+
+    return n_queries, x_best
+
 
 
 

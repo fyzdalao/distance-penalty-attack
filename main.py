@@ -2,6 +2,7 @@ import victim
 import utils
 from utils import *
 from square import square_attack_l2
+from square import square_attack_linf
 
 
 def load_model():
@@ -35,5 +36,5 @@ if __name__ == '__main__':
    correct_idx = margin > 0
    correct_idx = correct_idx.reshape((-1,))
 
-   square_attack_l2(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=1000, eps=4, p_init=0.1)
+   square_attack_linf(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=1000, eps=0.05, p_init=0.05, attack_tactic='None')
 
