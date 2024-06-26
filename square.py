@@ -4,6 +4,7 @@ import numpy as np
 import time
 from utils import margin_loss, margin_loss_their, Logger, get_time
 
+
 def pseudo_gaussian_pert_rectangles(x, y):
     delta = np.zeros([x, y])
     x_c, y_c = x // 2 + 1, y // 2 + 1
@@ -286,9 +287,7 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tact
     return n_queries, x_best
 
 
-
-
-def square_attack_linf(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='None'):
+def square_attack_linf(model, x, y, correct, n_iters, eps, p_init=0.1, attack_tactic='None', logits_amt=3):
 
     np.random.seed(19260817)
 
@@ -360,6 +359,13 @@ def square_attack_linf(model, x, y, correct, n_iters, eps, p_init=0.1, attack_ta
         x_new = np.clip(x_curr + delta_curr, min_val, max_val)
 
         logits = model(x_new)
+
+        if attack_tactic == 'average':
+            for i in range(logits_amt - 1):
+                logits += model(x_new)
+            logits /= logits_amt
+
+
         margin = margin_loss_their(y_curr, logits)
 
         idx_suc = margin <= 0

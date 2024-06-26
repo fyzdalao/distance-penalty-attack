@@ -6,7 +6,7 @@ from square import square_attack_linf
 
 
 def load_model():
-   return victim.Model(defense='AAASine')
+   return victim.Model(defense='inRND')
 
 
 def load_data(model, amount=2000, random_seed=0, need_right_prediction=False):
@@ -36,5 +36,5 @@ if __name__ == '__main__':
    correct_idx = margin > 0
    correct_idx = correct_idx.reshape((-1,))
 
-   square_attack_linf(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=1000, eps=0.05, p_init=0.05, attack_tactic='None')
+   square_attack_linf(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=2500, eps=0.05, p_init=0.05, attack_tactic='average')
 
