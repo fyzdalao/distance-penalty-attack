@@ -3,10 +3,13 @@ import utils
 from utils import *
 from square import square_attack_l2
 from square import square_attack_linf
+import numpy as np
 
+def load_undefended_model():
+   return victim.Model(defense='None')
 
-def load_model():
-   return victim.Model(defense='inRND')
+def load_model(defense_type='None'):
+   return victim.Model(defense=defense_type)
 
 
 def load_data(model, amount=2000, random_seed=0, need_right_prediction=False):
@@ -27,8 +30,13 @@ def try_the_model(model, x_test, y_test):
 
 
 if __name__ == '__main__':
-   model = load_model()
-   x_test, y_test = load_data(model=model)
+   undefended_model = load_undefended_model()
+   x_test, y_test = load_data(model=undefended_model)
+
+   np.random.seed(19260817)
+
+   model = load_model(defense_type='inRND')
+
    #try_the_model(model, x_test, y_test)
 
    logits_clean = model(x_test)

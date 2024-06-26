@@ -71,7 +71,7 @@ def p_selection(p_init, it, n_iters):
 
 def square_attack_l2(model, x, y, correct, n_iters, eps, p_init, attack_tactic='None'):
 
-    np.random.seed(19260817)
+    #np.random.seed(19260817)
 
     y = np.array(y, dtype=bool)
     result_path = 'results' + '/' + get_time() + '/log.log'
@@ -289,7 +289,7 @@ def square_attack_l2(model, x, y, correct, n_iters, eps, p_init, attack_tactic='
 
 def square_attack_linf(model, x, y, correct, n_iters, eps, p_init, attack_tactic, logits_amt=3):
 
-    np.random.seed(19260817)
+    #np.random.seed(19260817)
 
     y = np.array(y, dtype=bool)
     result_path = 'results' + '/' + get_time() + '/log.log'
