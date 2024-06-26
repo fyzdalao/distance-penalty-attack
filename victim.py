@@ -43,7 +43,7 @@ class Model(nn.Module):
         self.reverse_step = 0.7
 
         # RND parameters
-        self.n_in = 0.03
+        self.n_in = 0.025
         self.n_out = 0.3
 
     def forward(self, x):
