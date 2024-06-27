@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
    np.random.seed(19260817)
 
-   model = load_model(defense_type='inRND')
+   model = load_model(defense_type='singleDLD')
 
    #try_the_model(model, x_test, y_test)
 
@@ -44,5 +44,5 @@ if __name__ == '__main__':
    correct_idx = margin > 0
    correct_idx = correct_idx.reshape((-1,))
 
-   square_attack_linf(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=2500, eps=0.05, p_init=0.05, attack_tactic='average')
+   square_attack_linf(model=model, x=x_test, y=y_test, correct=correct_idx, n_iters=2500, eps=0.05, p_init=0.05, attack_tactic='None')
 

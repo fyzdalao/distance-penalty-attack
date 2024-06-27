@@ -29,7 +29,7 @@ def predict(x, model, batch_size, device):
 
 
 class Model(nn.Module):
-    def __init__(self, device=my_device, batch_size=500, defense='None'):
+    def __init__(self, device=my_device, batch_size=250, defense='None'):
         super(Model, self).__init__()
         self.cnn = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT).to(device).eval()
         self.arch = 'wide_resnet50_2'
@@ -53,6 +53,8 @@ class Model(nn.Module):
             return self.aaa_sine_forward(x)
         elif self.defense == 'inRND' or self.defense == 'outRND' or self.defense == 'inoutRND':
             return self.rnd_forward(x)
+        elif self.defense =='singleDLD':
+            return self.dashes_line_single_forward(x)
         else:
             warnings.warn('no such defense method')
 
@@ -78,6 +80,40 @@ class Model(nn.Module):
         if isinstance(x, np.ndarray):
             logits_ret = logits_ret.numpy()
         return logits_ret
+
+    def randbool(self, size):
+        return torch.randint(2, [size], device=self.device) == torch.randint(2, [size], device=self.device)
+
+    def dashes_line_single_forward(self, x):
+        # l_top = x + 0.3 * (T - x % T)
+        # l_low = x + 0.3 * T - 1.2 * (x % T)
+
+        with torch.no_grad():
+            logits = predict(x=x, model=self.cnn, batch_size=self.batch_size, device=self.device)
+            if isinstance(logits, np.ndarray):
+                logits = torch.as_tensor(logits, device=self.device)
+        logits_ori = logits.detach()
+
+        # 每个logit中选择最大的两个。value就是这两个的值，index_ori就是这两个的下标，即类别。
+        value, index_ori = torch.topk(logits_ori, k=2, dim=1)
+
+        margin_ori = value[:, 0] - value[:, 1]
+
+        target_high = margin_ori + 0.3 * (self.attractor_interval - margin_ori % self.attractor_interval)
+        target_low = margin_ori + 0.3 * self.attractor_interval - 1.2 * (margin_ori % self.attractor_interval)
+        int_size = int(margin_ori.shape[0])
+        decision = self.randbool(int_size)
+        target = target_high * decision + target_low * ~decision
+        gap_to_target = target - margin_ori
+        logits_ori[torch.arange(logits_ori.shape[0]), index_ori[:, 0]] += gap_to_target
+
+        logits_ret = logits_ori.detach().cpu()
+        if isinstance(x, np.ndarray):
+            logits_ret = logits_ret.numpy()
+        return logits_ret
+
+
+
 
 
     def rnd_forward(self, x):
